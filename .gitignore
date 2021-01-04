@@ -28,4 +28,5 @@ external/
 *.toml
 deploy.sh
 go.sum
+anime-more
 

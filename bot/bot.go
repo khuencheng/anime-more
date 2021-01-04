@@ -13,6 +13,7 @@ func StartBot() {
 			log.Println(err)
 		}
 	}()
+
 	b, err := tb.NewBot(tb.Settings{
 		Token:  config.GetConfig().GetString("telegram.bot_token"),
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
@@ -24,11 +25,11 @@ func StartBot() {
 	}
 
 	b.Handle("/anime", func(m *tb.Message) {
-		go RecommendHandler(m, b)
+		RecommendHandler(m, b)
 	})
 
 	b.Handle(tb.OnText, func(m *tb.Message) {
-		go MainHandler(m, b)
+		MainHandler(m, b)
 	})
 
 	b.Start()

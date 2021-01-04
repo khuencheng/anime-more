@@ -3,16 +3,16 @@ package crawler
 import (
 	"anime-more/config"
 	"encoding/json"
-	"fmt"
 	"github.com/anaskhan96/soup"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
 )
 
 func init() {
-	config.Init("dev")
+	config.Init()
 	conf := config.GetConfig()
 	soup.Header("User-Agent", conf.GetString("downloader.useragent"))
 }
@@ -21,18 +21,28 @@ type Item struct {
 	Title string
 	Url   string
 	Pic   string
+	From  string
 }
 
 func getDoubanPageLink(keyword string) string {
 	link := config.GetConfig().GetString("urls.douban_search") + keyword
+	log.Println(link)
 	resp, err := soup.Get(link)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return ""
 	}
 	doc := soup.HTMLParse(resp)
 	element := doc.Find("div", "class", "result")
+	if element.Error != nil {
+		log.Println(element.Error)
+		return ""
+	}
 	a := element.Find("a", "class", "nbg")
+	if a.Error != nil {
+		log.Println(element.Error)
+		return ""
+	}
 	txt := a.Attrs()["onclick"]
 	r, _ := regexp.Compile(`sid: (\d+)`)
 	txt = r.FindString(txt)
@@ -42,13 +52,19 @@ func getDoubanPageLink(keyword string) string {
 
 func DownloadDouban(keyword string) []Item {
 	link := getDoubanPageLink(keyword)
+	log.Println(link)
 	resp, err := soup.Get(link)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	doc := soup.HTMLParse(resp)
-	elements := doc.Find("div", "class", "recommendations-bd").FindAll("a")
+	node := doc.Find("div", "class", "recommendations-bd")
+	if node.Error != nil {
+		log.Println(node.Error)
+		return []Item{}
+	}
+	elements := node.FindAll("a")
 	if len(elements) == 0 {
 		return []Item{}
 	}
@@ -60,31 +76,32 @@ func DownloadDouban(keyword string) []Item {
 				Title: img.Attrs()["alt"],
 				Url:   element.Attrs()["href"],
 				Pic:   img.Attrs()["src"],
+				From:  "豆瓣",
 			})
 		}
 	}
 	return items
 }
 
-func parseBilibiliSeasonID(txt string) string {
+func parseBilibiliSeasonID(text string) string {
 	r, _ := regexp.Compile(`"season_id":(\d+)`)
-	found := r.FindString(txt)
+	found := r.FindString(text)
 	found = strings.Replace(found, `"season_id":`, "", 1)
 	return found
 }
 
 func DownloadBiliBili(keyword string) []Item {
 	link := config.GetConfig().GetString("urls.bilibili") + keyword
-	fmt.Println(link)
+	log.Println(link)
 	resp, err := soup.Get(link)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	doc := soup.HTMLParse(resp)
 	seasonID := parseBilibiliSeasonID(doc.FullText())
 	recommendUrl := config.GetConfig().GetString("urls.bilibili_recommend") + seasonID
-	fmt.Println(recommendUrl)
+	log.Println(recommendUrl)
 	type Recommend struct {
 		Code int `json:"code"`
 		Data struct {
@@ -101,19 +118,19 @@ func DownloadBiliBili(keyword string) []Item {
 	}
 	res, err := http.Get(recommendUrl)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	defer res.Body.Close()
 	recommendData, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	var recommend Recommend
 	err = json.Unmarshal(recommendData, &recommend)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	items := make([]Item, 0, 20)
@@ -122,6 +139,7 @@ func DownloadBiliBili(keyword string) []Item {
 			Title: rec.Title,
 			Url:   rec.URL,
 			Pic:   rec.Cover,
+			From:  "哔哩哔哩",
 		})
 	}
 	return items
@@ -130,38 +148,61 @@ func DownloadBiliBili(keyword string) []Item {
 
 func getMALRecommendLink(keyword string) string {
 	link := config.GetConfig().GetString("urls.myanimelist_search") + keyword
+	log.Println(link)
 	resp, err := soup.Get(link)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return ""
 	}
 	doc := soup.HTMLParse(resp)
-	element := doc.Find("div", "class", "js-categories-seasonal").Find("a", "class", "hoverinfo_trigger")
+	node := doc.Find("div", "class", "js-categories-seasonal")
+	if node.Error != nil {
+		log.Println(err)
+		return ""
+	}
+	element := node.Find("a", "class", "hoverinfo_trigger")
 	link = element.Attrs()["href"] + "/userrecs"
 	return link
 }
 
+func parseMALImageURL(text string) string {
+	r, _ := regexp.Compile(`1x,(.*) 2x`)
+	found := r.FindString(text)
+	found = strings.Replace(found, `1x,`, "", 1)
+	found = strings.Replace(found, ` 2x`, "", 1)
+	return found
+}
+
 func DownloadMAL(keyword string) []Item {
 	link := getMALRecommendLink(keyword)
+	log.Println(link)
 	resp, err := soup.Get(link)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	doc := soup.HTMLParse(resp)
-	elements := doc.Find("div", "id", "contentWrapper").FindAll("div", "class", "picSurround")
+	node := doc.Find("div", "id", "contentWrapper")
+	if node.Error != nil {
+		log.Println(err)
+		return []Item{}
+	}
+	elements := node.FindAll("div", "class", "picSurround")
 	if len(elements) == 0 {
 		return []Item{}
 	}
-	items := make([]Item, 0, 3)
+	items := make([]Item, 0, 30)
 	for i, element := range elements {
 		imgTag := element.Find("img")
 		a := element.Find("a")
+		picElement := imgTag.Attrs()["data-srcset"]
+		picUrl := parseMALImageURL(picElement)
 		if i < 30 {
 			items = append(items, Item{
 				Title: strings.Replace(imgTag.Attrs()["alt"], "Anime: ", "", 1),
 				Url:   a.Attrs()["href"],
-				Pic:   imgTag.Attrs()["data-src"],
+				Pic:   picUrl,
+				From:  "MyAnimeList",
 			})
 		}
 
@@ -173,7 +214,7 @@ func DownloadMAL(keyword string) []Item {
 func DownloadIBangumi(link string) []Item {
 	resp, err := soup.Get(link)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	doc := soup.HTMLParse(resp)
@@ -202,7 +243,7 @@ func DownloadIBangumi(link string) []Item {
 func DownloadIMDB(link string) []Item {
 	resp, err := soup.Get(link)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return []Item{}
 	}
 	doc := soup.HTMLParse(resp)
