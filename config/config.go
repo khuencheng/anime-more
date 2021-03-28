@@ -2,10 +2,10 @@ package config
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"github.com/spf13/viper"
 	"log"
-	_ "embed"
 )
 
 var config *viper.Viper

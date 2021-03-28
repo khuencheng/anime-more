@@ -18,10 +18,10 @@ func init() {
 }
 
 type Item struct {
-	Title string
-	Url   string
-	Pic   string
-	From  string
+	Title string `json:"title"`
+	Url   string `json:"url"`
+	Pic   string `json:"pic"`
+	From  string `json:"from"`
 }
 
 func getDoubanPageLink(keyword string) string {

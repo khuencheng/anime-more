@@ -6,6 +6,7 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 	"log"
 	"net/url"
+	"sync"
 )
 
 func MainHandler(m *tb.Message, b *tb.Bot) {
@@ -24,9 +25,23 @@ func RecommendHandler(m *tb.Message, b *tb.Bot) {
 	log.Println("message: ", m.Text, "payload: ", m.Payload)
 	keyword := url.QueryEscape(m.Payload)
 	items := make([]crawler.Item, 0, 100)
-	douban := crawler.DownloadDouban(keyword)
-	bili := crawler.DownloadBiliBili(keyword)
-	mal := crawler.DownloadMAL(keyword)
+	var douban, bili, mal []crawler.Item
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		douban = crawler.DownloadDouban(keyword)
+		wg.Done()
+	}()
+	go func() {
+		bili = crawler.DownloadBiliBili(keyword)
+		wg.Done()
+	}()
+	go func() {
+		mal = crawler.DownloadMAL(keyword)
+		wg.Done()
+
+	}()
+	wg.Wait()
 	items = append(items, douban...)
 	items = append(items, bili...)
 	items = append(items, mal...)
