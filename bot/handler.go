@@ -3,10 +3,11 @@ package bot
 import (
 	"anime-more/crawler"
 	"fmt"
-	tb "gopkg.in/tucnak/telebot.v2"
 	"log"
 	"net/url"
 	"sync"
+
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 func MainHandler(m *tb.Message, b *tb.Bot) {

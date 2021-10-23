@@ -3,16 +3,16 @@ package crawler
 import (
 	"anime-more/config"
 	"encoding/json"
-	"github.com/anaskhan96/soup"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/anaskhan96/soup"
 )
 
 func init() {
-	config.Init()
 	conf := config.GetConfig()
 	soup.Header("User-Agent", conf.GetString("downloader.useragent"))
 }
@@ -134,13 +134,15 @@ func DownloadBiliBili(keyword string) []Item {
 		return []Item{}
 	}
 	items := make([]Item, 0, 20)
-	for _, rec := range recommend.Data.Season {
-		items = append(items, Item{
-			Title: rec.Title,
-			Url:   rec.URL,
-			Pic:   rec.Cover,
-			From:  "哔哩哔哩",
-		})
+	for i, rec := range recommend.Data.Season {
+		if i < 8 {
+			items = append(items, Item{
+				Title: rec.Title,
+				Url:   rec.URL,
+				Pic:   rec.Cover,
+				From:  "哔哩哔哩",
+			})
+		}
 	}
 	return items
 
@@ -232,6 +234,7 @@ func DownloadIBangumi(link string) []Item {
 				Title: element.Attrs()["title"],
 				Url:   "https://bgm.tv/" + element.Attrs()["href"],
 				Pic:   picUrl,
+				From:  "Bangumi",
 			})
 		}
 

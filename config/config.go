@@ -4,8 +4,9 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
+
+	"github.com/spf13/viper"
 )
 
 var config *viper.Viper
@@ -14,6 +15,10 @@ var config *viper.Viper
 var confFile []byte
 
 func Init() {
+
+}
+
+func GetConfig() *viper.Viper {
 	config = viper.New()
 	config.SetConfigType("toml")
 	err := config.ReadConfig(bytes.NewBuffer(confFile))
@@ -21,8 +26,5 @@ func Init() {
 		log.Fatal("error on parsing configuration file")
 	}
 	fmt.Println(config.AllKeys())
-}
-
-func GetConfig() *viper.Viper {
 	return config
 }

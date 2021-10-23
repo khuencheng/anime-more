@@ -2,15 +2,16 @@ package bot
 
 import (
 	"anime-more/config"
-	tb "gopkg.in/tucnak/telebot.v2"
 	"log"
 	"time"
+
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 func StartBot() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println(err)
+			log.Println("panic: ", err)
 		}
 	}()
 

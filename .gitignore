@@ -29,4 +29,4 @@ external/
 deploy.sh
 go.sum
 anime-more
-
+*/node_modules/
